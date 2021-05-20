@@ -3,6 +3,36 @@ import numpy as np
 import networkx as nx
 
 
+def _create_taxi_room(r_dim):
+
+    graph = nx.grid_graph((r_dim, r_dim)).to_directed()
+    graph = nx.DiGraph(graph)
+    graph.add_edge((0, 0), 'T1')
+    graph.add_edge((0, r_dim-1), 'T2')
+    graph.add_edge((r_dim-1, 0), 'T3')
+    graph.add_edge((r_dim-1, r_dim-1), 'T4')
+
+    for node in graph.nodes:
+        graph.add_edge(node, node)
+
+    A = nx.adjacency_matrix(graph).todense()
+    P = A / A.sum(axis=1)
+
+    return graph.states, P
+
+
+
+class TaxiHL:
+
+    def __init__(self, r_dim, goal_reward = 0, non_goal_reward = 1, t=4):
+        states, P = _create_taxi_room(r_dim)
+        self.states = states
+        self.P = P
+        self.Z = np.ones((4, len(self.abstract_states)))
+
+
+
+
 def create_flat_MDP():
     dim = 5
     nav_locs = [(i,j) for i in range(dim) for j in range(dim)]
@@ -68,13 +98,12 @@ def create_flat_MDP():
     for node in graph:
         graph.add_edge(node, node)
 
-    for node in graph:
-        if len(graph.edges(node)) > 2:
-            print(node, len(graph.edges(node)), [e[1] for e in graph.edges(node)])
 
-
-    return networkx.linalg.adj_matrix(graph)
+    return states, transitions
 
 
 if __name__ == '__main__':
-    A = create_flat_MDP()
+    states, transitions = create_flat_MDP()
+
+    print(_create_taxi_room(5))
+
