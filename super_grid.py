@@ -130,10 +130,9 @@ class GridSubtasks():
             sums = np.einsum('j,ij->i', self.P_[state_idx, :], self.Z_i)
             res = (values / sums).reshape(-1, 1)
 
-            try:
-               return self.P_[state_idx, next_state_idx] / res
-            except Exception as e:
-                print(values[values > 0], sums, res)
+
+            return self.P_[state_idx, next_state_idx] / res
+
 
     def update_alpha(self):
         self.counter += 1
