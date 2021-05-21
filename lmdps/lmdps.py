@@ -16,7 +16,6 @@ def power_method(P, G, sparse=True, n_iter=1000):
         G = np.asarray(G) if not scipy.sparse.issparse(G) else G.todense()
 
     for _ in range(n_iter):
-
         z = G * P * z
 
     if sparse:
