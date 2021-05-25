@@ -118,7 +118,6 @@ class GridSubtasks():
 
         # Get the importance weight
         w_i_a = self.get_importance_weights(s_idx, ns_idx)
-
         old = self.Z_i[:, s_idx, None]
         next_ = self.Z_i[:, ns_idx, None]
         alpha = self.alpha
@@ -129,7 +128,6 @@ class GridSubtasks():
             values = self.P_[state_idx, next_state_idx] * self.Z_i[:, next_state_idx]
             sums = np.einsum('j,ij->i', self.P_[state_idx, :], self.Z_i)
             res = (values / sums).reshape(-1, 1)
-
 
             return self.P_[state_idx, next_state_idx] / res
 

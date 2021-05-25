@@ -47,6 +47,7 @@ def flat_Z_learning(c, iw=True, **kargs):
             Z.update(state, next_state, reward, weight=w_a)
 
             # If the agent has reached any of the exit sates
+            # TODO: remove
             grid.update_controls(Z.Z)
 
             terminate_episode = state in grid.terminal
