@@ -1,4 +1,4 @@
-from variants import *
+from grid_domain import *
 import argparse
 import pickle
 import numpy

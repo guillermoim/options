@@ -253,9 +253,6 @@ class TaxiProblem:
 
         self.exit_states_inside_partition = exit_states_inside_partition
 
-        for h in self.exit_states_inside_partition:
-            print('partition', h, 'exit_states', exit_states_inside_partition[h])
-
     def reset(self):
         self.current_state = random.choice(self.init_states)
 

@@ -21,10 +21,9 @@ def hlr_v1(c0, c1, **kargs):
     non_goal_reward = kargs['non_goal_reward']
     non_goal_states = kargs['non_goal_states']
 
-
     terminals = goal_states + non_goal_states
 
-    HL = TaxiSubstasks(dim, c1)
+    HL = TaxiSubstasks(dim, c1, lambda_)
     HL.update_alpha()
 
     Taxi = TaxiProblem(c0, dim, states, P, init_states, goal_states, non_goal_states, goal_reward, non_goal_reward)

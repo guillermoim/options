@@ -91,7 +91,7 @@ class GridSubtasks():
         (state_indices, weight_indices, selection_indices) that are used to perform the compositionality.
     '''
 
-    def __init__(self, r_dim, non_goal_reward, goal_reward, c, terminal_map):
+    def __init__(self, r_dim, non_goal_reward, goal_reward, c, lambda_, terminal_map):
 
         self.r_dim = r_dim
         self.non_goal_reward = non_goal_reward
@@ -106,7 +106,7 @@ class GridSubtasks():
         self.c = c
         self.counter = 0
         self.alpha = 0
-        self.lambda_ = 1
+        self.lambda_ = lambda_
 
     def update(self, state, next_state, room):
 

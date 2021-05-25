@@ -14,9 +14,9 @@ def create_config(name, dim, max_n_samples, lambda_=1):
         'non_goal_reward': -1
     }
 
-    G, P, states, init_states, non_goal_states, goal_states = create_flat_taxi_MDP(dim)
-    Z_true = ground_truth(dim)
-    Z_i_opt = ground_truth_subtasks(dim)
+    G, P, states, init_states, non_goal_states, goal_states = create_flat_taxi_MDP(dim, lambda_)
+    Z_true = ground_truth(dim, lambda_)
+    Z_i_opt = ground_truth_subtasks(dim, lambda_)
 
     execution['P'] = P
     execution['states'] = states
@@ -31,6 +31,10 @@ def create_config(name, dim, max_n_samples, lambda_=1):
 
 if __name__ == '__main__':
 
-    create_config('taxi_5_1', 5, 5000)
-    create_config('taxi_10_1', 10, 15000)
-    create_config('taxi_15_1', 15, 30000)
+    create_config('taxi_5_1', 5, 5000, 1)
+    create_config('taxi_10_1', 10, 15000, 1)
+    create_config('taxi_15_1', 15, 30000, 1)
+
+    create_config('taxi_5_10', 5, 5000, 10)
+    create_config('taxi_10_10', 10, 15000, 10)
+    create_config('taxi_15_10', 15, 30000, 10)

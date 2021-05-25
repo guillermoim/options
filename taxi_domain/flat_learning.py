@@ -1,15 +1,15 @@
 import sys
-
 sys.path.insert(0, '../..')
-
 from learning import ZLearning
 from tqdm import tqdm
 import random
 import numpy as np
 from .error_metric import error_metric
 
+
 def __init__():
     pass
+
 
 def _get_transition_prob(P, states, terminals, state, Z):
     idx = states.index(state)
