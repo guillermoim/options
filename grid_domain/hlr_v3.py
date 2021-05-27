@@ -27,8 +27,8 @@ def hlr_v3(c0, c1, **kargs):
 
     t_map = {(0, -1, r_dim // 2): (0, 0, r_dim // 2),
              (0, r_dim // 2, -1): (0, r_dim // 2, 0),
-             (0, 2, 5): (0, 2, r_dim - 1),
-             (0, 5, 2): (0, r_dim - 1, 2),
+             (0, r_dim // 2, r_dim): (0, r_dim // 2, r_dim - 1),
+             (0, r_dim, r_dim // 2): (0, r_dim - 1, r_dim // 2),
              (1, *goal_pos): (0, *goal_pos)}
 
     grid = SuperGrid(grid_size, r_dim, goal_pos, goal_rooms, non_goal_reward, goal_reward)

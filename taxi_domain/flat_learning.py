@@ -78,7 +78,7 @@ def flat_Z_learning(c, **kargs):
             next_state_idx = np.random.choice(np.arange(len(states)), p=p)
             next_state = states[next_state_idx]
 
-            w_a = _get_importance_weight(P, state_idx, next_state_idx, Z.Z)
+            w_a = _get_importance_weight(P, state_idx, next_state_idx, Z.Z).flatten()[0]
 
             Z.update(state, next_state, reward, weight=w_a)
 
