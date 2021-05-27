@@ -13,14 +13,14 @@ class HierarchicalLearning:
             for y in range(grid_size[0]):
                 room = (x, y)
                 exit_states_inside_room[room] = []
-                interior_states = _get_room_interior_states(room, self.r_dim)
-                exit_states, exit_sel = _get_exit_states(room, goal_pos, grid_size, goal_rooms)
+                interior_states = _get_room_interior_states(room, r_dim)
+                exit_states, exit_sel = _get_exit_states(room, goal_pos, grid_size, goal_rooms, r_dim)
                 H[room] = {'exit_states': exit_states, 'exit_selection': exit_sel, 'interior_states': interior_states}
 
         for h in H:
             for exit_state in H[h]['exit_states']:
                 if exit_state not in self.terminal:
-                    room = _id_room(exit_state)
+                    room = _id_room(exit_state, r_dim)
                     exit_states_inside_room[room].append(exit_state)
 
         self.exit_states_inside_room = exit_states_inside_room
@@ -34,11 +34,11 @@ class HierarchicalLearning:
 
     def update_exit_state(self, state, subtasks, abstract_states):
         # I still need to mount the solution, for now assume the subtasks.
-        room = _id_room(state)
+        room = _id_room(state, self.r_dim)
 
         exit_states, exit_selection = self.H[room]['exit_states'], self.H[room]['exit_selection']
 
-        normalized_state = _normalize_cell(state, room)
+        normalized_state = _normalize_cell(state, room, self.r_dim)
 
         exit_idxs = list(map(self.states.index, exit_states))
         weights = self.Z[exit_idxs] * exit_selection
@@ -62,7 +62,7 @@ class HierarchicalLearning:
         new_values = weights.T.dot(subtasks).reshape(-1, 1)
 
         for s_ in self.exit_states_inside_room[room]:
-            normalized_s_ = _normalize_cell(s_, room)
+            normalized_s_ = _normalize_cell(s_, room, self.r_dim)
             n_state_idx = abstract_states.index(normalized_s_)
 
             s_index = self.states.index(s_)
