@@ -115,7 +115,7 @@ class NRoomDomain():
         os = self.current_state
         ns = NRoomDomain._compute_next_state(self.current_state, action)
         r = self.r[os]
-        if not self._is_legal_move(os, ns):
+        if os not in self.terminal_states and not self._is_legal_move(os, ns):
             ns = os
             r = self.penalty  #penalty
         self.current_state = ns

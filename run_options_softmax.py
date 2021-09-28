@@ -54,6 +54,9 @@ for i, x in enumerate(env.interior_states):
     Q[i, _applicable_options(_id_room(x), dims, goal_rooms)] = 0
     policy[i, _applicable_options(_id_room(x), dims, goal_rooms)] = 1 / len(_applicable_options(_id_room(x), dims, goal_rooms))
 
+#for x in env.terminal_states:
+#    if
+
 # Q_o for options
 Qg = np.full((No, len(env.interior_states), env.Na), np.NaN)
 O_policies = np.full((No, len(env.interior_states), env.Na), 0.2)
@@ -72,7 +75,10 @@ for k in range(500000):
     alpha = 0.2     
     alpha_2 = 0.2
     
-    while env.current_state not in env.terminal_states:
+    while env.current_state not in env.goal_states:
+
+        if env.current_state in env.terminal_states:
+            pass
         
         # Select option from Softmax option
         p_options = _applicable_options(_id_room(env.current_state), dims, goal_rooms)
@@ -129,9 +135,9 @@ for k in range(500000):
 
         xxx = _normalize_cell(leaving_state, _id_room(os), room_size)
         
-        if leaving_state not in env.terminal_states:
+        if leaving_state not in env.goal_states:
             Q[i_is, o] = Q[i_is, o] + alpha * (acc_reward_option + gamma**t * np.nanmax(Q[i_ls, :]) - Q[i_is, o])
-        elif xxx == o_terminals[o]:
+        else:
             Q[i_is, o] = Q[i_is, o] + alpha * (acc_reward_option + gamma**t * -1 - Q[i_is, o])
             break
 
