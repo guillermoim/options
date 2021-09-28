@@ -12,13 +12,15 @@ abs_room
 
 env = NRoomDomain(dims, room_size, goal_pos, goal_rooms)
 
-Q = np.load('results/options_Q_eps_dicounted.npy')
+Q = np.load('results/options_Q_softmax.npy')
 
 names = ['T', 'L', 'R', 'B', 'G']
 
-a = 2
+a = 0
 
 O_policies = np.exp(Q) / np.exp(Q).sum(axis=2, keepdims=1) 
+
+print(names[a])
 
 for i, s in enumerate(abs_room.states):
     print(s, np.nanmax(Q[a, i, :]), names[np.nanargmax(Q[a, i, :])], env._compute_next_state(s, np.nanargmax(Q[a, i, :])))

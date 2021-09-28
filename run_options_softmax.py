@@ -51,14 +51,14 @@ No = 5
 Q = np.full((len(env.interior_states), No), np.NaN)
 policy = np.full((len(env.interior_states), No), np.NaN)
 for i, x in enumerate(env.interior_states):
-    Q[i, _applicable_options(_id_room(x), dims, goal_rooms)] = 1
+    Q[i, _applicable_options(_id_room(x), dims, goal_rooms)] = 0
     policy[i, _applicable_options(_id_room(x), dims, goal_rooms)] = 1 / len(_applicable_options(_id_room(x), dims, goal_rooms))
 
 # Q_o for options
 Qg = np.full((No, len(env.interior_states), env.Na), np.NaN)
 O_policies = np.full((No, len(env.interior_states), env.Na), 0.2)
 for i, x in enumerate(abs_room.interior_states):
-    Qg[:, i, abs_room.applicable_actions(x)] = 1
+    Qg[:, i, abs_room.applicable_actions(x)] = 0
     O_policies[:, i, abs_room.applicable_actions(x)] = 1 / len(abs_room.applicable_actions(x))
 
 
@@ -66,7 +66,7 @@ o_terminals = [(0, -1, 2), (0, 2, -1), (0, 2, 5), (0, 5, 2), (1, 2, 3)]
 
 gamma = 1
 
-for k in range(200000):
+for k in range(500000):
     
     env.reset()
     alpha = 0.2     
@@ -76,9 +76,10 @@ for k in range(200000):
         
         # Select option from Softmax option
         p_options = _applicable_options(_id_room(env.current_state), dims, goal_rooms)
-        print(env.current_state, p_options, policy[env.states.index(env.current_state), p_options])
+
         o = np.random.choice(p_options, p=policy[env.states.index(env.current_state), p_options])
         
+
         # Retrieve option's policy
         policy_o = O_policies[o, :, :]
 
@@ -87,6 +88,8 @@ for k in range(200000):
         leaving_state = None
 
         t = 0
+
+        os = None
         
         while True: # while option not finished, follow policy for o until termination
             # Normalize state
@@ -108,7 +111,7 @@ for k in range(200000):
             if n_ns in o_terminals:
                 leaving_state = ns
                 sel = o_terminals.index(n_ns)
-                G = np.full(No, -env.penalty)
+                G = np.full(No, env.penalty)
                 G[sel] = 0
                 Qg[:, i_n_s, action] = Qg[:, i_n_s, action] + alpha_2 * (r + gamma * G - Qg[:, i_n_s, action])
                 break
@@ -119,22 +122,22 @@ for k in range(200000):
 
         # New estimate of the softmax policy for the options
         O_policies = np.exp(Qg) / np.nansum(np.exp(Qg), keepdims=1, axis=2)
-        print(np.nansum(O_policies, axis=2).shape, np.exp(Qg).shape)
 
         # Update high-level Q function
         i_is = env.states.index(init_state)
         i_ls = env.states.index(leaving_state)
+
+        xxx = _normalize_cell(leaving_state, _id_room(os), room_size)
         
         if leaving_state not in env.terminal_states:
-            #print('Ending option', o, 'from', init_state, 'to', leaving_state, 'with acc. reward', acc_reward_option, np.nanmax(Q[i_ls, :]))
             Q[i_is, o] = Q[i_is, o] + alpha * (acc_reward_option + gamma**t * np.nanmax(Q[i_ls, :]) - Q[i_is, o])
-        else:
-            #print('Ending option', o, 'from', init_state, 'to', leaving_state, 'with acc. reward', acc_reward_option, env.r[leaving_state])
-            Q[i_is, o] = Q[i_is, o] + alpha * (acc_reward_option + gamma**t * env.r[leaving_state] - Q[i_is, o])
+        elif xxx == o_terminals[o]:
+            Q[i_is, o] = Q[i_is, o] + alpha * (acc_reward_option + gamma**t * -1 - Q[i_is, o])
             break
 
     # Derive new high level Softmax policy
     policy = np.exp(Q) / np.nansum(np.exp(Q), axis=1, keepdims=1)
 
 np.savetxt('results/H_Q_softmax.txt', Q)
+np.savetxt('results/H_Policy_softmax.txt', policy)
 np.save('results/options_Q_softmax', Qg)
