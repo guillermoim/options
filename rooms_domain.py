@@ -109,7 +109,9 @@ class NRoomDomain():
     def _is_legal_move(self, state, next_state):
         p1 = next_state in self.states
         p2 = self.P[self.states.index(state), self.states.index(next_state)] > 0 if p1 else False
-        return p1 and p2
+        p3 = next_state not in self.terminal_states or next_state in self.goal_states
+
+        return p1 and p2 and p3
 
     def apply_action(self, action):
         os = self.current_state
@@ -126,6 +128,11 @@ class NRoomDomain():
         return [a for a in range(self.Na) if self._is_legal_move(state, NRoomDomain._compute_next_state(state, a))]
 
 
-    def reset(self):
-        idx = np.random.choice(range(len(self.interior_states)))
-        self.current_state = self.interior_states[idx]
+    def reset(self, option=1):
+        if option == 1:
+            idx = np.random.choice(range(len(self.interior_states)))
+            self.current_state = self.interior_states[idx]
+        else:
+            ls = self.interior_states + [t for t in self.terminal_states if t not in self.goal_states]
+            idx = np.random.choice(range(len(ls)))
+            self.current_state = ls[idx]

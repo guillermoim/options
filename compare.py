@@ -3,9 +3,9 @@ from rooms_domain import NRoomDomain
 import numpy as np
 
 dims = (2,2)
-room_size = 5
-goal_pos = (2,3)
-goal_rooms = [(1,1)]
+room_size = 3
+goal_pos = (1,1)
+goal_rooms = [(0,0)]
 
 infty = 1e6
 
@@ -19,8 +19,8 @@ policy_flat = np.loadtxt('results/Flat_Policy_softmax.txt')
 Q_h = np.loadtxt('results/H_Q_softmax.txt')
 policy_h = np.loadtxt('results/H_Policy_softmax.txt')
 
-V_flat = np.nansum(np.multiply(Q_flat, policy_flat), axis=1)
-V_h = np.nansum(np.multiply(Q_h, policy_h), axis=1)
+V_flat = np.nanmax(Q_flat, axis=1)
+V_h = np.nanmax(Q_h, axis=1)
 
 for i, s in enumerate(env.interior_states):
      print(s, V_flat[i], V_h[i])
