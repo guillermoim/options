@@ -16,7 +16,7 @@ Q = np.load('results/options_Q_softmax.npy')
 
 names = ['T', 'L', 'R', 'B', 'G']
 
-a = 3
+a = 2
 
 O_policies = np.exp(Q) / np.nansum(np.exp(Q), axis=2, keepdims=1) 
 

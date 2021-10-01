@@ -7,7 +7,7 @@ room_size = 3
 goal_pos = (1,1)
 goal_rooms = [(0,0)]
 
-env = NRoomDomain(dims, room_size, goal_pos, goal_rooms)
+env = NRoomDomain(dims, room_size, goal_pos, goal_rooms, True)
 
 # Q-Learning
 actions = [0,1,2,3,4,5]

@@ -5,7 +5,7 @@ from scipy import sparse
 
 infty = 1e12
 
-def room_domain_MDP(dims, room_size, goal_pos, goal_rooms):
+def room_domain_MDP(dims, room_size, goal_pos, goal_rooms, high_level=True):
 
     assert room_size % 2 > 0, "The room size should be an odd number"
 
@@ -33,20 +33,22 @@ def room_domain_MDP(dims, room_size, goal_pos, goal_rooms):
 
     graph = nx.DiGraph(graph)
 
-    # Place top and bottom terminal states
-    for i in range(pass_p, col_rooms*room_size, room_size):
-        graph.add_edge((0, 0, i), (0, -1, i))
-        graph.add_edge((0, room_size*row_rooms-1, i), (0, room_size*row_rooms,  i))
+    if not high_level:
+        # Place top and bottom terminal states
+        for i in range(pass_p, col_rooms*room_size, room_size):
+            graph.add_edge((0, 0, i), (0, -1, i))
+            graph.add_edge((0, room_size*row_rooms-1, i), (0, room_size*row_rooms,  i))
 
-    # Place left and right terminal states
-    for j in range(pass_p, row_rooms * room_size, room_size):
-        graph.add_edge((0, j, 0), (0, j, -1))
-        graph.add_edge((0, j, room_size*col_rooms - 1), (0, j, room_size * col_rooms))
+        # Place left and right terminal states
+        for j in range(pass_p, row_rooms * room_size, room_size):
+            graph.add_edge((0, j, 0), (0, j, -1))
+            graph.add_edge((0, j, room_size*col_rooms - 1), (0, j, room_size * col_rooms))
 
     # Add in-goal-positioned states
     for (i, j) in product(range(col_rooms), range(row_rooms)):
-        goal_i, goal_j = (room_size*j)+goal_pos[0], (room_size*i)+goal_pos[1]
-        graph.add_edge((0, goal_i, goal_j), (1, goal_i, goal_j))
+        if (i,j) in goal_rooms or not high_level:
+            goal_i, goal_j = (room_size*j)+goal_pos[0], (room_size*i)+goal_pos[1]
+            graph.add_edge((0, goal_i, goal_j), (1, goal_i, goal_j))
 
     # self edges
     for node in graph.nodes():
@@ -65,8 +67,8 @@ def room_domain_MDP(dims, room_size, goal_pos, goal_rooms):
 
 class NRoomDomain():
 
-    def __init__(self, dims, room_size, goal_pos, goal_rooms, goal_reward=0, non_goal_reward=-1, penalty=-1e12):
-        states, terminal_states, goal_states, P = room_domain_MDP(dims, room_size, goal_pos, goal_rooms)
+    def __init__(self, dims, room_size, goal_pos, goal_rooms, high_level=True, goal_reward=0, non_goal_reward=-1, penalty=-1e12):
+        states, terminal_states, goal_states, P = room_domain_MDP(dims, room_size, goal_pos, goal_rooms, high_level)
         self.states = states 
         self.terminal_states = [states[i] for i in range(len(states)) if P[i,i] == 1]
         self.interior_states = [s for s in states if s not in terminal_states]
@@ -109,9 +111,9 @@ class NRoomDomain():
     def _is_legal_move(self, state, next_state):
         p1 = next_state in self.states
         p2 = self.P[self.states.index(state), self.states.index(next_state)] > 0 if p1 else False
-        p3 = next_state not in self.terminal_states or next_state in self.goal_states
+        #p3 = next_state not in self.terminal_states or next_state in self.goal_states
 
-        return p1 and p2 and p3
+        return p1 and p2 #and p3
 
     def apply_action(self, action):
         os = self.current_state
