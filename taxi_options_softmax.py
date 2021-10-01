@@ -1,16 +1,17 @@
 from taxi_domain import TaxiDomain, _create_taxi_room
 import numpy as np
 from tqdm import tqdm
+from itertools import product
 
 ## Auxiliary
-def _compute_next_state(corners, state, action):
+def _compute_next_abs_state(state, action):
     next_state = None
     if action == 0: # TOP
         next_state=(state[0], state[1]-1, state[2])
     elif action==1: # LEFT
         next_state=(state[0], state[1], state[2]-1)
     elif action==2: # RIGHT
-        next_state=(state[0], state[1]-1, state[2]+1)
+        next_state=(state[0], state[1], state[2]+1)
     elif action==3: # BOTTOM
         next_state=(state[0], state[1]+1, state[2])
     elif action==4: # PICKUP
@@ -27,6 +28,19 @@ def _is_legal_move(states, P, state, next_state):
     p2 = P[states.index(state), states.index(next_state)] > 0 if p1 else False
     return p1 and p2
 
+def _applicable_actions(abs_state, states, P):
+    
+    actions = []
+    
+    for a in range(6):
+        abs_next_state = _compute_next_abs_state(abs_state, a)
+        p1 = abs_next_state in states
+        p2 = P[states.index(abs_state), states.index(abs_next_state)] > 0 if p1 else False
+        if p1 and p2: actions.append(a)
+    
+    return actions
+
+
 ## Auxiliary
 
 dim = 5
@@ -36,14 +50,19 @@ env = TaxiDomain(dim)
 No = 4
 names = ['TL', 'TR', 'BL', 'BR']
 options_corners = [(0,0), (dim-1,0), (0,dim-1), (dim-1,dim-1)]
+options_terminals = [(1, 0,0), (1, dim-1,0), (1, 0,dim-1), (1, dim-1,dim-1)]
 
+exit_states = set()
+for pair in product(options_corners, options_corners):
+    exit_states.add((pair[0], 'TAXI', pair[1]))
 
 def _applicable_options(state):
     options = []
 
     if state[1] == 'TAXI':
         options.append(options_corners.index(state[2]))
-    elif state[1] not in ('Forbidden', 'D'):
+
+    elif state[1] != 'D':
         options.append(options_corners.index(state[1]))
 
     return options  
@@ -66,13 +85,15 @@ for i, x in enumerate(env.states):
 
 # Q_o for options
 abs_states, abs_P = _create_taxi_room(dim)
+
 Qg = np.full((No, len(abs_states), env.Na), np.NaN)
 O_policies = np.full((No, len(abs_states), env.Na), np.NaN)
+
 for i, x in enumerate(abs_states):
     if x[0]: continue
     x_actions = []
     for a in actions:
-        xs = _compute_next_state(options_corners, x, a)
+        xs = _compute_next_abs_state(x, a)
         if _is_legal_move(abs_states, abs_P, x, xs):
             x_actions.append(a)
     Qg[:, i, x_actions] = 0
@@ -82,91 +103,103 @@ for i, x in enumerate(abs_states):
 
 gamma = 1
 
-for k in tqdm(range(10000)):
+errors = []
+
+eps0 = 0.15
+eps1 = 0.15
+
+c1 = 100000
+c2 = 50000
+
+for k in tqdm(range(500000)):
     
     env.reset()
-    alpha = 0.2     
-    alpha_2 = 0.2
-    
-    while env.current_state not in env.terminal_states:
+
+    while env.current_state not in env.goal_states:
         
-        acc_reward_option = 0
         init_state = env.current_state
-
-        # Select option from Softmax option
-        #if env.current_state in env.terminal_states:
-        #    print(k, 'A', env.current_state)
-        #    ntn = env.P[:, env.states.index(env.current_state)].nonzero()[0][0]
-        #    p_options = _applicable_options(_id_room(env.states[ntn]), dims, goal_rooms)
-        #    env.current_state = env.states[ntn]
-        #    print(k, 'B', env.current_state)
-
-        #    acc_reward_option+=-1
-        
-        p_options = _applicable_options(env.current_state)
-
-        o = np.random.choice(p_options, p=policy[env.states.index(env.current_state), p_options])
-
-        # Retrieve option's policy
-        policy_o = O_policies[o, :, :]
-
-        leaving_state = None
 
         t = 0
 
+        # Select option from Softmax option
+        
+        p_options = _applicable_options(env.current_state)
+        
+        if np.random.random() < 1-eps0:
+            o = np.nanargmax(Q[env.states.index(init_state), :])
+        else:
+            o = np.random.choice(p_options)
+
+        leaving_state = None
+
         os = None
+        room = None
         
         while True: # while option not finished, follow policy for o until termination
             # Normalize state
-            n_s = 0, *env.current_state[0]
+            n_s = (0, *env.current_state[0])
             i_n_s = abs_states.index(n_s)
-
-            print(k, 'inside', env.current_state)
+            p_o_actions = _applicable_actions(n_s, abs_states, abs_P)
             
             # I take the action for the 'projected' state, sampling from Softmax policy
             p_actions = env.applicable_actions(env.current_state)
-            print(env.current_state, p_actions, O_policies[o, i_n_s, p_actions])
-            action = np.random.choice(p_actions, p=O_policies[o, i_n_s, p_actions])
-
-            # Apply action and project new state
-            os, ns, r = env.apply_action(action)
-            n_ns = 0 if ns[1] == os[1] else 1, ns[0]
-            i_n_ns = abs_states.index(n_ns)
             
-            # Accumulate reward for the executing option
-            acc_reward_option += gamma**t * r
-            
-            # Update Qg accordingly and leave if state is an option's terminal state
-            if n_ns[0] != n_s[0]:
-                leaving_state = ns
-                sel = options_corners.index((n_ns[1], n_ns[2]))
-                G = np.full(No, env.penalty)
-                G[sel] = 0
-                Qg[:, i_n_s, action] = Qg[:, i_n_s, action] + alpha_2 * (r + gamma * G - Qg[:, i_n_s, action])
-                break
+            if np.random.random() < 1-eps1:
+                action = np.nanargmax(Qg[o, i_n_s, :])
             else:
-                Qg[:, i_n_s, action] = Qg[:, i_n_s, action] + alpha_2 * (r + gamma * np.nanmax(Qg[:, i_n_ns, :], axis=1) - Qg[:, i_n_s, action])
+                action = np.random.choice(p_o_actions)
             
             t+=1
 
-        # New estimate of the softmax policy for the options
-        O_policies = np.exp(Qg) / np.nansum(np.exp(Qg), keepdims=1, axis=2)
+            if action not in p_actions:
+                
+                # Update (learn) and select new action for the high-level
+                x_s = n_s
+                x_ns = _compute_next_abs_state(n_s, action)
+                sel = options_terminals.index(x_ns)
+                G = np.full(No, -1e10)
+                G[sel] = 0
+                Qg[:, i_n_s, action] = Qg[:, i_n_s, action] + alpha_2 * (-1 + gamma * G - Qg[:, i_n_s, action])
+                # Terminate option
+                leaving_state = env.current_state
+                break
 
+            # Apply action and project new state
+            os, ns, r = env.apply_action(action)
+            n_ns = (0 if os[1]==ns[1] else 1, *env.current_state[0])
+            i_n_ns = abs_states.index(n_ns)
+
+            # Update Qg accordingly and leave if state is an option's terminal state
+            alpha_2 = c2 / (c2+k)
+            if n_ns[0] == 1:
+                leaving_state = ns
+                sel = options_terminals.index(n_ns)
+                G = np.full(No, -1e10)
+                G[sel] = 0
+                Qg[:, i_n_s, action] = Qg[:, i_n_s, action] + alpha_2 * (r + gamma * G - Qg[:, i_n_s, action])
+                eps1 = eps1*0.99
+                break
+            else:
+                Qg[:, i_n_s, action] = Qg[:, i_n_s, action] + alpha_2 * (r + gamma * np.nanmax(Qg[:, i_n_ns, :], axis=1) - Qg[:, i_n_s, action])
+        
         # Update high-level Q function
         i_is = env.states.index(init_state)
         i_ls = env.states.index(leaving_state)
         
+        alpha = c1 / (c1+k)
         if leaving_state not in env.goal_states:
-            Q[i_is, o] = Q[i_is, o] + alpha * (acc_reward_option + gamma**t * np.nanmax(Q[i_ls, :]) - Q[i_is, o])
-            if leaving_state in env.terminal_states:
-                break
+            Q[i_is, o] = Q[i_is, o] + alpha * (-t + np.nanmax(Q[i_ls, :]) - Q[i_is, o])    
         else:
-            Q[i_is, o] = Q[i_is, o] + alpha * (acc_reward_option + gamma**t * env.r[leaving_state] - Q[i_is, o])
-            break
-    
-    # Derive new high level Softmax policy
-    policy = np.exp(Q) / np.nansum(np.exp(Q), axis=1, keepdims=1)
+            Q[i_is, o] = Q[i_is, o] + alpha * (-t + env.r[leaving_state] - Q[i_is, o])
+        
+        #error = np.mean(np.abs(np.nanmax(Q_flat, axis=1) - np.nanmax(Q, axis=1)))
+        #errors.append(error)
 
-np.savetxt('results/Taxi_H_Q_softmax.txt', Q)
-np.savetxt('results/Taxi_H_Policy_softmax.txt', policy)
-np.save('results/Taxi_options_Q', Qg)
+    # Derive new high level Softmax policy
+    eps0 = eps0*0.99
+
+np.savetxt('results/TAXI_H_Q_softmax.txt', Q)
+np.savetxt('results/TAXI_H_Policy_softmax.txt', policy)
+np.save('results/TAXI_options_Q_softmax', Qg)
+np.savetxt('results/TAXI_errors.txt', np.array(errors))
+

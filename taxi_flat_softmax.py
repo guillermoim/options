@@ -1,5 +1,6 @@
 from taxi_domain import TaxiDomain
 import numpy as np
+from tqdm import tqdm
 
 env = TaxiDomain(5)
 
@@ -16,9 +17,8 @@ for i, x in enumerate(env.states):
 
 gamma = 1
 
-for k in range(100000):
+for k in tqdm(range(10000)):
     
-    if k%100 ==0:print(k)
     env.reset()
     alpha = 0.2
 
@@ -41,5 +41,5 @@ for k in range(100000):
 
     policy = np.exp(Q) / np.nansum(np.exp(Q), keepdims=1, axis=1)
     
-np.savetxt('results/TAXI_x10_Flat_Q_softmax.txt', Q)
-np.savetxt('results/TAXI_x10_Flat_Policy_softmax.txt', policy)
+np.savetxt('results/TAXI_Flat_Q_softmax.txt', Q)
+np.savetxt('results/TAXI_Flat_Policy_softmax.txt', policy)

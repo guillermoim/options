@@ -2,7 +2,7 @@ from partitions_tracker import _id_room
 from rooms_domain import NRoomDomain
 import numpy as np
 
-dims = (2,2)
+dims = (5,5)
 room_size = 3
 goal_pos = (1,1)
 goal_rooms = [(0,0)]
@@ -21,6 +21,8 @@ policy_h = np.loadtxt('results/H_Policy_softmax.txt')
 
 V_flat = np.nanmax(Q_flat, axis=1)
 V_h = np.nanmax(Q_h, axis=1)
+
+print(Q_h.shape, Q_flat.shape)
 
 for i, s in enumerate(env.interior_states):
      print(s, V_flat[i], V_h[i])

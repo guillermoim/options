@@ -2,7 +2,7 @@ from rooms_domain import NRoomDomain
 import numpy as np
 from tqdm import tqdm
 
-dims = (2,2)
+dims = (5,5)
 room_size = 3
 goal_pos = (1,1)
 goal_rooms = [(0,0)]

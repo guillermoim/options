@@ -82,13 +82,13 @@ def taxi_domain_MDP(dim=5, lambda_=1):
     # Also, I need to add some terminals in the 1D to allow exploration, these terminals happen
     # (taxi_loc, pass, dst) whenever taxi_loc = corner and taxi_loc != pass.
 
-    for taxi in corners:
-        for passenger in corners:
-            for dst in corners:
-                if taxi == passenger: continue
-                if passenger == dst: continue
-                transition = (taxi, passenger, dst), (taxi, 'Forbidden', None)
-                terminal_edges.append(transition)
+    #for taxi in corners:
+    #    for passenger in corners:
+    #        for dst in corners:
+    #            if taxi == passenger: continue
+    #            if passenger == dst: continue
+    #            transition = (taxi, passenger, dst), (taxi, 'Forbidden', None)
+    #            terminal_edges.append(transition)
 
 
     graph = nx.DiGraph()
