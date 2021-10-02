@@ -56,11 +56,22 @@ exit_states = set()
 for pair in product(options_corners, options_corners):
     exit_states.add((pair[0], 'TAXI', pair[1]))
 
+for c0 in options_corners:
+    for c1 in options_corners:
+        if c0!=c1:
+            exit_states.add((c0, c0, c1))
+
+exit_states = [env.states.index(e) for e in exit_states]
+
+
 def _applicable_options(state):
     options = []
 
     if state[1] == 'TAXI':
         options.append(options_corners.index(state[2]))
+        for c in options_corners:
+            if c != state[2]:
+                options.append(options_corners.index(c))
 
     elif state[1] != 'D':
         options.append(options_corners.index(state[1]))
@@ -101,6 +112,9 @@ for i, x in enumerate(abs_states):
 
 #o_terminals = [(0, -1, 2), (0, 2, -1), (0, 2, 5), (0, 5, 2), (1, 2, 3)]
 
+Q_flat = np.loadtxt('results/TAXI_Flat_Q_10x10.txt')
+
+
 gamma = 1
 
 errors = []
@@ -111,7 +125,7 @@ eps1 = 0.15
 c1 = 100000
 c2 = 50000
 
-for k in tqdm(range(500000)):
+for k in tqdm(range(10000)):
     
     env.reset()
 
@@ -150,6 +164,9 @@ for k in tqdm(range(500000)):
                 action = np.random.choice(p_o_actions)
             
             t+=1
+
+            error = np.mean(np.abs(np.nanmax(Q_flat[exit_states, :], axis=1) - np.nanmax(Q[exit_states, :], axis=1)))
+            errors.append(error)
 
             if action not in p_actions:
                 
@@ -192,14 +209,11 @@ for k in tqdm(range(500000)):
         else:
             Q[i_is, o] = Q[i_is, o] + alpha * (-t + env.r[leaving_state] - Q[i_is, o])
         
-        #error = np.mean(np.abs(np.nanmax(Q_flat, axis=1) - np.nanmax(Q, axis=1)))
-        #errors.append(error)
+        
 
     # Derive new high level Softmax policy
     eps0 = eps0*0.99
 
-np.savetxt('results/TAXI_H_Q_softmax.txt', Q)
-np.savetxt('results/TAXI_H_Policy_softmax.txt', policy)
-np.save('results/TAXI_options_Q_softmax', Qg)
-np.savetxt('results/TAXI_errors.txt', np.array(errors))
-
+np.savetxt('results/TAXI_H_Q_10x0.txt', Q)
+np.save('results/TAXI_options_Q_10x10', Qg)
+np.savetxt('results/TAXI_H_errors_10x10.txt', np.array(errors))

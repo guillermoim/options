@@ -1,15 +1,21 @@
 from partitions_tracker import _id_room
-from taxi_domain import TaxiDomain
+from rooms_domain import NRoomDomain
 import numpy as np
 
-env = TaxiDomain(5)
 
-Q_flat = np.loadtxt('results/TAXI_Flat_Q_softmax.txt')
-Q_h = np.loadtxt('results/TAXI_H_Q_softmax.txt')
+
+dims = (8,8)
+room_size = 5
+goal_pos = (2,3)
+goal_rooms = [(0,7)]
+
+env = NRoomDomain(dims, room_size, goal_pos, goal_rooms, True)
+Q_flat = np.loadtxt('results/rooms_Flat_Q_8x8.txt')
+
+print(len(env.states), Q_flat.shape)
 
 V_flat = np.nanmax(Q_flat, axis=1)
-V_h = np.nanmax(Q_h, axis=1)
 
 
-for i, s in enumerate(env.states):
-     print(s, V_flat[i], V_h[i])
+for i, s in enumerate(env.interior_states):
+     print(s, V_flat[i])

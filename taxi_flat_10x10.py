@@ -2,7 +2,7 @@ from taxi_domain import TaxiDomain
 import numpy as np
 from tqdm import tqdm
 
-env = TaxiDomain(5)
+env = TaxiDomain(10)
 
 # Q-Learning
 actions = list(range(env.Na))
@@ -13,20 +13,28 @@ policy = np.full((env.Ns, env.Na), np.NaN)
 for i, x in enumerate(env.states):
     if x not in env.terminal_states:
         Q[i, env.applicable_actions(x)] = 0
-        policy[i, env.applicable_actions(x)] = 1 / len(env.applicable_actions(x))
+
+Q_ref = np.loadtxt('results/TAXI_Flat_Q_10x10.txt')
+errors = []
 
 gamma = 1
 
-for k in tqdm(range(10000)):
+c = 10000
+eps = 0.3
+
+for k in tqdm(range(30000)):
     
     env.reset()
-    alpha = 0.2
+    alpha = c / (c + k + 1)
 
-    while True:
+    while env.current_state not in env.goal_states:
         
         p_actions = env.applicable_actions(env.current_state)
         
-        action = np.random.choice(p_actions, p=policy[env.states.index(env.current_state), p_actions])
+        if np.random.random() < 1-eps:
+            action = np.nanargmax(Q[env.states.index(env.current_state), :])
+        else:
+            action = np.random.choice(p_actions)
 
         os, ns, r = env.apply_action(action)
         
@@ -35,11 +43,14 @@ for k in tqdm(range(10000)):
             
         if ns in env.terminal_states:
             Q[i_s, action] = Q[i_s, action] + alpha * (r + gamma * env.r[ns] - Q[i_s, action])
-            break
         else:
             Q[i_s, action] = Q[i_s, action] + alpha * (r + gamma * np.nanmax(Q[i_ns, :]) - Q[i_s, action])
+        
+        error = np.mean(np.abs(np.nanmax(Q_ref[:-len(env.terminal_states), :], axis=1) - np.nanmax(Q[:-len(env.terminal_states), :], axis=1)))
+        errors.append(error)
 
-    policy = np.exp(Q) / np.nansum(np.exp(Q), keepdims=1, axis=1)
+    eps = eps * .99
+
     
-np.savetxt('results/TAXI_Flat_Q_softmax.txt', Q)
-np.savetxt('results/TAXI_Flat_Policy_softmax.txt', policy)
+np.savetxt('results/TAXI_Flat_Q_10x10.txt', Q)
+np.savetxt('results/TAXI_Flat_errors_10x10.txt', errors)

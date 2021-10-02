@@ -4,10 +4,10 @@ from partitions_tracker import _id_room, _normalize_cell
 from tqdm import tqdm
 from itertools import product
 
-dims = (5,5)
-room_size = 3
-goal_pos = (1,1)
-goal_rooms = [(0,0)]
+dims = (3,3)
+room_size = 5
+goal_pos = (2,3)
+goal_rooms = [(0,2)]
 
 
 env = NRoomDomain(dims, room_size, goal_pos, goal_rooms, high_level=True)
@@ -72,7 +72,7 @@ for i, x in enumerate(abs_room.interior_states):
     Qg[:, i, abs_room.applicable_actions(x)] = 0
     O_policies[:, i, abs_room.applicable_actions(x)] = 1 / len(abs_room.applicable_actions(x))
 
-Q_flat = np.loadtxt('results/Flat_Q_softmax.txt')
+Q_flat = np.loadtxt('results/rooms_Flat_Q_3x3.txt')
 
 gamma = 1
 
@@ -85,7 +85,7 @@ c1 = 100000
 c2 = 50000
 
 
-for k in tqdm(range(50000)):
+for k in tqdm(range(10000)):
     
     env.reset(1)
 
@@ -128,6 +128,10 @@ for k in tqdm(range(50000)):
                 action = np.random.choice(p_o_actions)
             
             t+=1
+
+            error = np.mean(np.abs(np.nanmax(Q_flat[E_set_idx, :], axis=1) - np.nanmax(Q[E_set_idx, :], axis=1)))
+            errors.append(error)
+
 
             if action not in p_actions:
                 
@@ -174,13 +178,11 @@ for k in tqdm(range(50000)):
         else:
             Q[i_is, o] = Q[i_is, o] + alpha * (-t + env.r[leaving_state] - Q[i_is, o])
         
-        error = np.mean(np.abs(np.nanmax(Q_flat[E_set_idx, :], axis=1) - np.nanmax(Q[E_set_idx, :], axis=1)))
-        errors.append(error)
+        
 
     # Derive new high level Softmax policy
     eps0 = eps0*0.99
 
-np.savetxt('results/H_Q_softmax.txt', Q)
-np.savetxt('results/H_Policy_softmax.txt', policy)
-np.save('results/options_Q_softmax', Qg)
-np.savetxt('results/errors.txt', np.array(errors))
+np.savetxt('results/rooms_H_Q_3x3.txt', Q)
+np.save('results/rooms_options_Q_3x3', Qg)
+np.savetxt('results/rooms_H_errors_3x3.txt', np.array(errors))
