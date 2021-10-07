@@ -134,7 +134,9 @@ class NRoomDomain():
         if option == 1:
             idx = np.random.choice(range(len(self.interior_states)))
             self.current_state = self.interior_states[idx]
-        else:
+        elif option == 2:
             ls = self.interior_states + [t for t in self.terminal_states if t not in self.goal_states]
             idx = np.random.choice(range(len(ls)))
             self.current_state = ls[idx]
+        elif option == 3:
+            self.current_state = (0,0,0)

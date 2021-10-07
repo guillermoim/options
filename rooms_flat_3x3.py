@@ -1,3 +1,4 @@
+from numpy.core.fromnumeric import mean
 from rooms_domain import NRoomDomain
 import numpy as np
 from tqdm import tqdm
@@ -23,8 +24,9 @@ gamma = 1
 
 Q_ref = np.loadtxt('results/rooms_Flat_Q_3x3.txt')
 errors = []
+rewards = []
 
-c = 10000
+c = 30000
 eps = 0.3
 
 for k in tqdm(range(10000)):
@@ -53,9 +55,12 @@ for k in tqdm(range(10000)):
         
         error = np.mean(np.abs(np.nanmax(Q_ref[:-len(env.terminal_states), :], axis=1) - np.nanmax(Q[:-len(env.terminal_states), :], axis=1)))
         errors.append(error)
+        reward = np.mean(np.nanmax(Q[:-len(env.terminal_states), :], axis=1))
+        rewards.append(reward)
         
-    eps = eps * .99
+    #eps = eps * .99
 
     
 np.savetxt('results/rooms_Flat_Q_3x3.txt', Q)
-np.savetxt('results/rooms_Flat_errors_3x3.txt', errors)
+np.savetxt('results/rooms_Flat_errors_dynamiclr_03eps.txt', errors)
+np.savetxt('results/rooms_mean_rewards_dynamiclr_03eps.txt', rewards)

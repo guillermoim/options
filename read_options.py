@@ -2,7 +2,7 @@ import numpy as np
 from rooms_domain import NRoomDomain
 
 dims = (2,2)
-room_size = 3
+room_size = 5
 goal_pos = (1,1)
 goal_rooms = [(0,0)]
 
@@ -12,15 +12,15 @@ abs_room
 
 env = NRoomDomain(dims, room_size, goal_pos, goal_rooms)
 
-Q = np.load('results/options_Q_softmax.npy')
+Q = np.load('results/rooms_options_Q_3x3.npy')
 
 names = ['T', 'L', 'R', 'B', 'G']
 
-a = 2
+o = 2
 
 O_policies = np.exp(Q) / np.nansum(np.exp(Q), axis=2, keepdims=1) 
 
-print(names[a])
+print(Q.shape)
 
 for i, s in enumerate(abs_states):
-     print(s, names[np.nanargmax(Q[a, i, :])])
+     print(s, names[np.nanargmax(Q[o, i, :])], np.nanmax(Q[o, i, :]))

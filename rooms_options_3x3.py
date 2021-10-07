@@ -9,7 +9,6 @@ room_size = 5
 goal_pos = (2,3)
 goal_rooms = [(0,2)]
 
-
 env = NRoomDomain(dims, room_size, goal_pos, goal_rooms, high_level=True)
 abs_room = NRoomDomain((1,1), room_size, goal_pos, [(0,0)], high_level=False)
 abs_states = abs_room.states
@@ -23,7 +22,7 @@ def option_is_applicable(room, room_size, option, states, goal_pos):
 def _applicable_options(room, room_size, states, goal_pos):
     return [o for o in range(5) if option_is_applicable(room, room_size, o, states, goal_pos)]
 
-def _get_exit_states(dims, room_size, states, goal_pos):
+def _get_exit_states(dims, room_size, states):
     
     exit_states = []
     rooms = set([room for room in product(range(dims[0]), range(dims[1]))])
@@ -31,18 +30,13 @@ def _get_exit_states(dims, room_size, states, goal_pos):
     for room in rooms:
         X, Y = room[0]*room_size, room[1]*room_size
         ts = [(0, X-1, (Y+room_size)//2), (0, (X+room_size)//2, Y-1), (0, (X+room_size)//2, Y+room_size), (0, X+room_size, (Y+room_size)//2)]
-        local = []
-        for t in ts:
-            if t is (1,1,1):
-                print(t)
-            if t in states:
-                exit_states.append(t)
-                local.append(t)
-        #print(room, local)
+        local = [t for t in ts if t in states]
+        exit_states.extend(local)
     return exit_states
 
-E_set = _get_exit_states(dims, room_size, env.states, (1,1))
+E_set = _get_exit_states(dims, room_size, env.states)
 E_set_idx = [env.states.index(x) for x in E_set]
+
 
 # Q-Learning
 actions = [0,1,2,3,4]
@@ -51,7 +45,7 @@ o_terminals = [(0, -1, room_size//2), (0, room_size//2, -1), (0, room_size//2, r
 No = len(o_terminals)
 
 # High-level Q
-Q = np.full((len(env.states), No), np.NaN)
+Q = np.full((len(env.states), No), np.NaN, dtype=np.float64)
 policy = np.full((len(env.states), No), np.NaN)
 for i, x in enumerate(env.states):
     if x in env.terminal_states:
@@ -66,28 +60,30 @@ for i, x in enumerate(env.states):
     policy[i, p_options] = 1 / len(p_options)
 
 # Q_o for options
-Qg = np.full((No, len(abs_room.interior_states), env.Na), np.NaN)
+Qg = np.full((No, len(abs_room.interior_states), env.Na), np.NaN, dtype=np.float64)
 O_policies = np.full((No, len(abs_room.interior_states), env.Na), np.NaN)
 for i, x in enumerate(abs_room.interior_states):
     Qg[:, i, abs_room.applicable_actions(x)] = 0
     O_policies[:, i, abs_room.applicable_actions(x)] = 1 / len(abs_room.applicable_actions(x))
 
 Q_flat = np.loadtxt('results/rooms_Flat_Q_3x3.txt')
+Q_options= np.load('results/rooms_options_Q_3x3.npy')
 
 gamma = 1
 
 errors = []
+errors_o = []
 
-eps0 = 0.15
-eps1 = 0.15
+eps0 = 0.3
+eps1 = 0.1
 
-c1 = 100000
+c1 = 60000
 c2 = 50000
-
 
 for k in tqdm(range(10000)):
     
-    env.reset(1)
+    env.reset(3)
+    alpha = c1 / (c1+k+1)
 
     while env.current_state not in env.goal_states:
         
@@ -98,7 +94,6 @@ for k in tqdm(range(10000)):
         # Select option from Softmax option
         
         p_options = _applicable_options(_id_room(env.current_state, room_size), room_size, env.states, goal_pos)
-        
 
         if np.random.random() < 1-eps0:
             o = np.nanargmax(Q[env.states.index(init_state), :])
@@ -111,9 +106,14 @@ for k in tqdm(range(10000)):
         leaving_state = None
 
         os = None
-        room = None
-        
+
+        alpha_2 = c2 / (c2+k+1)
+
         while True: # while option not finished, follow policy for o until termination
+            
+            error_o = np.mean(np.abs(np.nanmax(Q_options[:room_size**2], axis=2) - np.nanmax(Qg[:room_size**2], axis=2)))
+            errors_o.append(error_o)
+            
             # Normalize state
             n_s = _normalize_cell(env.current_state, _id_room(env.current_state, room_size), room_size)
             i_n_s = abs_states.index(n_s)
@@ -132,21 +132,19 @@ for k in tqdm(range(10000)):
             error = np.mean(np.abs(np.nanmax(Q_flat[E_set_idx, :], axis=1) - np.nanmax(Q[E_set_idx, :], axis=1)))
             errors.append(error)
 
-
             if action not in p_actions:
                 
                 # Update (learn) and select new action for the high-level
                 abs_room.current_state = n_s
                 x_os, x_ns, x_r = abs_room.apply_action(action)
                 sel = o_terminals.index(x_ns)
-                G = np.full(No, abs_room.penalty)
+                G = np.full(No, env.penalty)
                 G[sel] = 0
                 Qg[:, i_n_s, action] = Qg[:, i_n_s, action] + alpha_2 * (-1 + gamma * G - Qg[:, i_n_s, action])
                 # Terminate option
                 leaving_state = env.current_state
                 eps1 = eps1*0.99
-
-                break
+                action = np.random.choice(p_actions)
 
             # Apply action and project new state
             os, ns, r = env.apply_action(action)
@@ -154,7 +152,6 @@ for k in tqdm(range(10000)):
             i_n_ns = abs_states.index(n_ns)
 
             # Update Qg accordingly and leave if state is an option's terminal state
-            alpha_2 = c2 / (c2+k)
             if n_ns in o_terminals:
                 leaving_state = ns
                 sel = o_terminals.index(n_ns)
@@ -169,20 +166,16 @@ for k in tqdm(range(10000)):
         # Update high-level Q function
         i_is = env.states.index(init_state)
         i_ls = env.states.index(leaving_state)
-        
-
-        alpha = c1 / (c1+k)
 
         if leaving_state not in env.goal_states:
             Q[i_is, o] = Q[i_is, o] + alpha * (-t + np.nanmax(Q[i_ls, :]) - Q[i_is, o])    
         else:
             Q[i_is, o] = Q[i_is, o] + alpha * (-t + env.r[leaving_state] - Q[i_is, o])
-        
-        
 
     # Derive new high level Softmax policy
-    eps0 = eps0*0.99
+    #eps0 = eps0*0.99
 
 np.savetxt('results/rooms_H_Q_3x3.txt', Q)
 np.save('results/rooms_options_Q_3x3', Qg)
-np.savetxt('results/rooms_H_errors_3x3.txt', np.array(errors))
+np.savetxt('results/rooms_options_errors_current.txt', np.array(errors))
+np.savetxt('results/rooms_options_errors_o_HL07_LL03.txt', np.array(errors_o))
