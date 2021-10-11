@@ -26,7 +26,7 @@ Q_ref = np.loadtxt('results/rooms_Flat_Q_3x3.txt')
 errors = []
 rewards = []
 
-c = 30000
+c = 5000
 eps = 0.3
 
 for k in tqdm(range(10000)):

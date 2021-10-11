@@ -25,7 +25,7 @@ errors = []
 
 gamma = 1
 
-c = 10000
+c = 5000
 eps = 0.3
 
 for k in tqdm(range(10000)):

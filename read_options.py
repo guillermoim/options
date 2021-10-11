@@ -1,9 +1,9 @@
 import numpy as np
 from rooms_domain import NRoomDomain
 
-dims = (2,2)
+dims = (1,1)
 room_size = 5
-goal_pos = (1,1)
+goal_pos = (2,3)
 goal_rooms = [(0,0)]
 
 abs_room = NRoomDomain((1,1), room_size, goal_pos, [(0,0)])
@@ -14,11 +14,9 @@ env = NRoomDomain(dims, room_size, goal_pos, goal_rooms)
 
 Q = np.load('results/rooms_options_Q_3x3.npy')
 
-names = ['T', 'L', 'R', 'B', 'G']
+names = ['T', 'L', 'R', 'B', 'G', 'NoOp']
 
-o = 2
-
-O_policies = np.exp(Q) / np.nansum(np.exp(Q), axis=2, keepdims=1) 
+o = 0
 
 print(Q.shape)
 
