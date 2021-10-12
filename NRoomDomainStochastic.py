@@ -27,7 +27,6 @@ class NRoomDomainStochastic():
             for idx, s in enumerate(self.interior_states):
                 next_states = np.where(~np.isnan(op[idx, :]))[0]
                 p = op[idx, next_states].copy()
-
                 KL = kl_div(p, self.P[idx, next_states]).sum()
 
                 r[s] = non_goal_reward - lambda_ * KL
@@ -40,6 +39,7 @@ class NRoomDomainStochastic():
                 r[s] = goal_reward
 
         self.r = r
+
 
     def apply_action(self, action):
         

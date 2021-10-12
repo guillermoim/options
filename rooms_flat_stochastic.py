@@ -6,9 +6,9 @@ from tqdm import tqdm
 dims = (3,3)
 room_size = 5
 goal_pos = (2,3)
-goal_rooms = [(0,2)]
+goal_rooms = [(0,0)]
 
-env = NRoomDomainStochastic(dims, room_size, goal_pos, goal_rooms, path='rooms_opt_pi_3x3.txt')
+env = NRoomDomainStochastic(dims, room_size, goal_pos, goal_rooms, path='solutions_lmdps/policy_3x3_goal@0-0_rooms5x5.txt')
 
 # Q-Learning
 actions = [0,1,2,3,4,5]
