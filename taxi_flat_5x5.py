@@ -21,9 +21,9 @@ errors = []
 gamma = 1
 
 c = 10000
-eps = 0.3
+eps = 0.15
 
-for k in tqdm(range(20000)):
+for k in tqdm(range(10000)):
     
     env.reset()
     alpha = c / (c + k + 1)

@@ -25,7 +25,8 @@ def _create_taxi_room(r_dim):
     return list(graph.nodes), np.asarray(P)
 
 
-def taxi_domain_MDP(dim=5, lambda_=1):
+def taxi_domain_MDP(dim=5):
+
     '''
     This method creates the flat MDP for our taxi domain.
     TODO: Explain better how it works and the return statement.
@@ -42,8 +43,8 @@ def taxi_domain_MDP(dim=5, lambda_=1):
     for loc in nav_locs:
         neighbors = []
         # UP and LEFT
-        if loc[0] - 1 > -1: neighbors.append((loc[0] - 1, loc[1]))
-        if loc[1] - 1 > -1: neighbors.append((loc[0], loc[1] - 1))
+        if loc[0] - 1 > - 1: neighbors.append((loc[0] - 1, loc[1]))
+        if loc[1] - 1 > - 1: neighbors.append((loc[0], loc[1] - 1))
         # DOWN and RIGHT
         if loc[0] + 1 < dim: neighbors.append((loc[0] + 1, loc[1]))
         if loc[1] + 1 < dim: neighbors.append((loc[0], loc[1] + 1))
@@ -73,8 +74,8 @@ def taxi_domain_MDP(dim=5, lambda_=1):
                     transitions_2.append(transition)
 
     terminal_edges = []
+    
     # I should add a signle terminal state that happens when taxi_pos
-
     for corner in corners:
         transition = (corner, 'TAXI', corner), (corner, 'D', corner)
         terminal_edges.append(transition)
@@ -82,6 +83,7 @@ def taxi_domain_MDP(dim=5, lambda_=1):
     # Also, I need to add some terminals in the 1D to allow exploration, these terminals happen
     # (taxi_loc, pass, dst) whenever taxi_loc = corner and taxi_loc != pass.
 
+    # WARNING: This I should not allow them
     #for taxi in corners:
     #    for passenger in corners:
     #        for dst in corners:
@@ -89,7 +91,6 @@ def taxi_domain_MDP(dim=5, lambda_=1):
     #            if passenger == dst: continue
     #            transition = (taxi, passenger, dst), (taxi, 'Forbidden', None)
     #            terminal_edges.append(transition)
-
 
     graph = nx.DiGraph()
     graph.add_edges_from(transitions_1)
@@ -101,24 +102,23 @@ def taxi_domain_MDP(dim=5, lambda_=1):
 
     states = list(graph.nodes())
 
-    initial_states = [s for s in states if s[1] not in ('D', 'TAXI', 'Forbidden')]
+    initial_states = [s for s in states if s[1] not in ('D', 'TAXI')]
 
     goal_states = [s for s in states if s[1] == 'D']
-    non_goal_states = [s for s in states if s[1] == 'Forbidden']
 
     A = nx.linalg.adjacency_matrix(graph).todense()
     P = A / A.sum(axis=1)
 
-    return np.asarray(P), states, initial_states, non_goal_states, goal_states, corners
+    return np.asarray(P), states, initial_states, goal_states, corners
 
 
 class TaxiDomain:
 
     def __init__(self, dims, goal_reward = 0, non_goal_reward = -1, penalty=-1e9):
-        P, states, init_states, non_goal_states, goal_states, corners = taxi_domain_MDP(dims)
+        P, states, init_states, goal_states, corners = taxi_domain_MDP(dims)
         self.states = states
         self.init_states = init_states
-        self.terminal_states = non_goal_states + goal_states
+        self.terminal_states = goal_states
         self.P = P
         self.goal_states = goal_states
         self.corners = corners
@@ -127,7 +127,6 @@ class TaxiDomain:
         r = {}
         for s in states:
              if s not in self.terminal_states: r[s] = non_goal_reward
-             elif s not in self.goal_states: r[s] = penalty
              elif s in self.goal_states: r[s] = goal_reward
         self.r = r
 
@@ -146,8 +145,6 @@ class TaxiDomain:
                 next_state = state[0], 'TAXI', state[2]
             elif state[1] == 'TAXI' and state[0] == state[2]:
                 next_state = state[0], 'D', state[2]
-            elif state[1] == 'TAXI' and state[1] != state[2] and state[0] in self.corners:
-                next_state = state[0], 'Forbidden', None
         elif action==5: # NoOP
             next_state = state
         
@@ -163,9 +160,7 @@ class TaxiDomain:
         os = self.current_state
         ns = self._compute_next_state(self.current_state, action)
         r = self.r[os]
-        if os not in self.terminal_states and not self._is_legal_move(os, ns):
-            ns = os
-            r = self.penalty  # penalty
+
         self.current_state = ns
 
         return os, ns, r

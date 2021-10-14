@@ -61,7 +61,7 @@ for c0 in options_corners:
         if c0!=c1:
             exit_states.add((c0, c0, c1))
 
-exit_states = [env.states.index(e) for e in exit_states]
+E_set = [env.states.index(e) for e in exit_states]
 
 
 def _applicable_options(state):
@@ -122,12 +122,13 @@ errors = []
 eps0 = 0.15
 eps1 = 0.15
 
-c1 = 100000
-c2 = 50000
+c1 = 1000
+c2 = 3000
 
 for k in tqdm(range(10000)):
     
-    env.reset()
+    env.current_state = E_set[np.random.choice(len(E_set))]
+    alpha = c1 / (c1+k+1)
 
     while env.current_state not in env.goal_states:
         
@@ -147,7 +148,8 @@ for k in tqdm(range(10000)):
         leaving_state = None
 
         os = None
-        room = None
+        
+        alpha_2 = c2 / (c2+k+1)
         
         while True: # while option not finished, follow policy for o until termination
             # Normalize state
@@ -162,7 +164,6 @@ for k in tqdm(range(10000)):
                 action = np.nanargmax(Qg[o, i_n_s, :])
             else:
                 action = np.random.choice(p_o_actions)
-            
             t+=1
 
             error = np.mean(np.abs(np.nanmax(Q_flat[exit_states, :], axis=1) - np.nanmax(Q[exit_states, :], axis=1)))
@@ -194,7 +195,6 @@ for k in tqdm(range(10000)):
                 G = np.full(No, -1e10)
                 G[sel] = 0
                 Qg[:, i_n_s, action] = Qg[:, i_n_s, action] + alpha_2 * (r + gamma * G - Qg[:, i_n_s, action])
-                eps1 = eps1*0.99
                 break
             else:
                 Qg[:, i_n_s, action] = Qg[:, i_n_s, action] + alpha_2 * (r + gamma * np.nanmax(Qg[:, i_n_ns, :], axis=1) - Qg[:, i_n_s, action])
@@ -209,10 +209,6 @@ for k in tqdm(range(10000)):
         else:
             Q[i_is, o] = Q[i_is, o] + alpha * (-t + env.r[leaving_state] - Q[i_is, o])
         
-        
-
-    # Derive new high level Softmax policy
-    eps0 = eps0*0.99
 
 np.savetxt('results/TAXI_H_Q_10x0.txt', Q)
 np.save('results/TAXI_options_Q_10x10', Qg)

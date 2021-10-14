@@ -1,4 +1,6 @@
-from rooms_domain import NRoomDomain
+from NRoomDomainStochastic import NRoomDomainStochastic
+from NRoomStochasticOptions import NRoomStochasticOptions
+
 import numpy as np
 from partitions_tracker import _id_room, _normalize_cell
 from tqdm import tqdm
@@ -7,11 +9,16 @@ from itertools import product
 dims = (3,3)
 room_size = 5
 goal_pos = (2,3)
-goal_rooms = [(0,2)]
+goal_rooms = [(0,0)]
 
-env = NRoomDomain(dims, room_size, goal_pos, goal_rooms, high_level=True)
-abs_room = NRoomDomain((1,1), room_size, goal_pos, [(0,0)], high_level=False)
-abs_states = abs_room.states
+states_path = 'solutions_rooms3x3_size5x5/abs_states_5x5.pkl'
+passive_dyn = 'solutions_rooms3x3_size5x5/passive_dynamics_goal@2-3_5x5.txt'
+optimal_policy = 'solutions_rooms3x3_size5x5/optimal_policy_options_goal@2-3_5x5.npy'
+
+env = NRoomDomainStochastic(dims, room_size, goal_pos, goal_rooms, path='solutions_lmdps/policy_3x3_goal@0-0_rooms5x5.txt')
+options_env = NRoomStochasticOptions(states_path, passive_dyn, optimal_policy)
+
+abs_states = options_env.states
 
 def option_is_applicable(room, room_size, option, states, goal_pos):
     X, Y = room[0]*room_size, room[1]*room_size
@@ -60,20 +67,20 @@ for i, x in enumerate(env.states):
     policy[i, p_options] = 1 / len(p_options)
 
 # Q_o for options
-Qg = np.full((No, len(abs_room.interior_states), env.Na), np.NaN, dtype=np.float64)
-O_policies = np.full((No, len(abs_room.interior_states), env.Na), np.NaN)
-for i, x in enumerate(abs_room.interior_states):
-    Qg[:, i, abs_room.applicable_actions(x)] = 0
-    O_policies[:, i, abs_room.applicable_actions(x)] = 1 / len(abs_room.applicable_actions(x))
+Qg = np.full((No, len(options_env.states[:-5]), env.Na), np.NaN, dtype=np.float64)
+O_policies = np.full((No, len(options_env.states[:-5]), env.Na), np.NaN)
+for i, x in enumerate(options_env.states[:-5]):
+    Qg[:, i, options_env.applicable_actions(x)] = 0
+    O_policies[:, i, options_env.applicable_actions(x)] = 1 / len(options_env.applicable_actions(x))
 
-Q_flat = np.loadtxt('results/rooms_Flat_Q_3x3.txt')
+Q_flat = np.loadtxt('Q_stochastic_3x3.txt')
 
 gamma = 1
 
 errors = []
 
 eps0 = 0.3
-eps1 = 0.1
+eps1 = 0.4
 
 c1 = 1000
 c2 = 3000
@@ -81,6 +88,7 @@ c2 = 3000
 for k in tqdm(range(5000)):
     
     env.current_state = E_set[np.random.choice(len(E_set))]
+    options_env.current_state = _normalize_cell(env.current_state, _id_room(env.current_state, room_size), room_size)
     alpha = c1 / (c1+k+1)
 
     while env.current_state not in env.goal_states:
@@ -109,7 +117,7 @@ for k in tqdm(range(5000)):
             # Normalize state
             n_s = _normalize_cell(env.current_state, _id_room(env.current_state, room_size), room_size)
             i_n_s = abs_states.index(n_s)
-            p_o_actions = abs_room.applicable_actions(n_s)
+            p_o_actions = options_env.applicable_actions(n_s)
             
             # I take the action for the 'projected' state, sampling from Softmax policy
             p_actions = env.applicable_actions(env.current_state)
@@ -118,8 +126,6 @@ for k in tqdm(range(5000)):
                 action = np.nanargmax(Qg[o, i_n_s, :])
             else:
                 action = np.random.choice(p_o_actions)
-            
-            t+=1
 
             error = np.mean(np.abs(np.nanmax(Q_flat[E_set_idx, :], axis=1) - np.nanmax(Q[E_set_idx, :], axis=1)))
             errors.append(error)
@@ -127,31 +133,39 @@ for k in tqdm(range(5000)):
             if action not in p_actions:
                 
                 # Update (learn) and select new action for the high-level
-                abs_room.current_state = n_s
-                x_os, x_ns, x_r = abs_room.apply_action(action)
-                sel = o_terminals.index(x_ns)
-                G = np.full(No, env.penalty)
-                G[sel] = 0
-                Qg[:, i_n_s, action] = Qg[:, i_n_s, action] + alpha_2 * (-1 + gamma * G - Qg[:, i_n_s, action])
+                options_env.current_state = n_s
+                x_os, x_ns, x_r = options_env.apply_action(o, action)
+                G = options_env.r[options_env.states.index(x_ns),:]
+                Qg[:, i_n_s, action] = Qg[:, i_n_s, action] + alpha_2 * (x_r + gamma * G - Qg[:, i_n_s, action])
                 # Terminate option
                 leaving_state = env.current_state
                 action = np.random.choice(p_actions)
+                
+                options_env.current_state = _normalize_cell(env.current_state, _id_room(env.current_state, room_size), room_size)
 
             # Apply action and project new state
-            os, ns, r = env.apply_action(action)
+            os, ns, R = env.apply_action(action)
             n_ns = _normalize_cell(ns, _id_room(os, room_size), room_size)
             i_n_ns = abs_states.index(n_ns)
+
+            t+=R
 
             # Update Qg accordingly and leave if state is an option's terminal state
             if n_ns in o_terminals:
                 leaving_state = ns
-                sel = o_terminals.index(n_ns)
-                G = np.full(No, env.penalty)
-                G[sel] = 0
-                Qg[:, i_n_s, action] = Qg[:, i_n_s, action] + alpha_2 * (r + gamma * G - Qg[:, i_n_s, action])
+                x_os, x_ns, x_r = options_env.apply_action(o, action)
+                G = options_env.r[options_env.states.index(x_ns),:]
+                Qg[:, i_n_s, action] = Qg[:, i_n_s, action] + alpha_2 * (x_r + gamma * G - Qg[:, i_n_s, action])
+                options_env.current_state = _normalize_cell(env.current_state, _id_room(env.current_state, room_size))
+
+                #policy = np.exp(Qg[:, :-5]) / np.nansum(np.exp(Q[:len(env.interior_states)]), axis=1, keepdims=True)
+
                 break
             else:
-                Qg[:, i_n_s, action] = Qg[:, i_n_s, action] + alpha_2 * (r + gamma * np.nanmax(Qg[:, i_n_ns, :], axis=1) - Qg[:, i_n_s, action])
+                x_os, x_ns, x_r = options_env.apply_action(o, action)
+                Qg[:, i_n_s, action] = Qg[:, i_n_s, action] + alpha_2 * ( x_r + gamma * np.nanmax(Qg[:, i_n_ns, :], axis=1) - Qg[:, i_n_s, action])
+                options_env.current_state = n_ns
+
         
         # Update high-level Q function
         i_is = env.states.index(init_state)
@@ -165,8 +179,7 @@ for k in tqdm(range(5000)):
     # Derive new high level Softmax policy
     policy = np.exp(Q[:len(env.interior_states)]) / np.nansum(np.exp(Q[:len(env.interior_states)]), axis=1, keepdims=True)
 
-    #eps0 = eps0*0.99
 
-np.savetxt('results/rooms_H_Q_3x3.txt', Q)
-np.save('results/rooms_options_Q_3x3', Qg)
-np.savetxt('results/rooms_H_errors_3x3.txt', np.array(errors))
+np.savetxt('results/rooms_stochastic_H_Q_3x3.txt', Q)
+np.save('results/rooms_stochastic_options_Q_3x3', Qg)
+np.savetxt('results/rooms_stochastic_H_errors_3x3.txt', np.array(errors))
