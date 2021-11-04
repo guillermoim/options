@@ -25,7 +25,7 @@ errors = []
 gamma = 1
 
 c = 5000
-eps = 0.3
+eps = 0.2
 
 for k in tqdm(range(10000)):
     
@@ -53,8 +53,7 @@ for k in tqdm(range(10000)):
 
         error = np.mean(np.abs(np.nanmax(Q_ref[:-len(env.terminal_states), :], axis=1) - np.nanmax(Q[:-len(env.terminal_states), :], axis=1)))
         errors.append(error)
-        
-    eps = eps * .99
-    
+
+
 np.savetxt('results/rooms_Flat_Q_8x8.txt', Q)
 np.savetxt('results/rooms_Flat_errors_8x8.txt', errors)

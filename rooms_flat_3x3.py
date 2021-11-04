@@ -17,7 +17,7 @@ Q = np.full((env.Ns, env.Na), np.NaN)
 policy = np.full((env.Ns, env.Na), np.NaN)
 
 for i, x in enumerate(env.interior_states):
-    Q[i, env.applicable_actions(x)] = 0
+    Q[i, env.applicable_actions(x)] = 1
     policy[i, env.applicable_actions(x)] = 1 / len(env.applicable_actions(x))
 
 gamma = 1
@@ -55,12 +55,8 @@ for k in tqdm(range(10000)):
         
         error = np.mean(np.abs(np.nanmax(Q_ref[:-len(env.terminal_states), :], axis=1) - np.nanmax(Q[:-len(env.terminal_states), :], axis=1)))
         errors.append(error)
-        reward = np.mean(np.nanmax(Q[:-len(env.terminal_states), :], axis=1))
-        rewards.append(reward)
         
-    #eps = eps * .99
-
     
 np.savetxt('results/rooms_Flat_Q_3x3.txt', Q)
-np.savetxt('results/rooms_Flat_errors_dynamiclr_03eps.txt', errors)
+np.savetxt('results/rooms_Flat_errors_3x3.txt', errors)
 np.savetxt('results/rooms_mean_rewards_dynamiclr_03eps.txt', rewards)

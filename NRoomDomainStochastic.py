@@ -17,35 +17,53 @@ class NRoomDomainStochastic():
         self.Ns = len(self.states)
         self.Na = len(self.actions)
         self.penalty = penalty
-        self.P_a = np.full((self.Ns, self.Na, self.Ns), 0, dtype=np.float)
+        self.P_a = np.full((self.Ns, self.Na, self.Ns), np.nan, dtype=np.float)
 
         r = {}
-
         if path != None:
-            op = np.loadtxt(path)
+            op = np.load(open(path, 'rb'))
             self.op = op
+
             for idx, s in enumerate(self.interior_states):
                 next_states = np.where(~np.isnan(op[idx, :]))[0]
                 p = op[idx, next_states].copy()
                 KL = kl_div(p, self.P[idx, next_states]).sum()
 
                 r[s] = non_goal_reward - lambda_ * KL
-                for a in range(len(next_states)):
-                    self.P_a[idx, a, next_states] = np.roll(p, a)
+                for x, ns in enumerate(next_states):
+                    a = NRoomDomainStochastic._identify_transition(s, states[ns])
 
-       
+                    self.P_a[idx, a, next_states] = np.roll(p, x)
+
         for s in states:
             if s in goal_states:
                 r[s] = goal_reward
+            elif s in self.terminal_states:
+                r[s] = -1e4
 
         self.r = r
 
+    @staticmethod
+    def _identify_transition(state, next_state):
+        
+        if next_state [1] == state[1]-1:
+            return 0 
+        elif next_state[2] == state[2]-1:
+            return 1
+        elif next_state[2] == state[2]+1:
+            return 2
+        elif next_state[1] == state[1]+1:
+            return 3
+        elif next_state[0] != state[0]:
+            return 4
+        elif next_state == state:
+            return 5
 
     def apply_action(self, action):
         
         os = self.current_state
         os_idx = self.states.index(os)
-        p = self.P_a[self.states.index(os), action, :].nonzero()[0]
+        p = np.where(~np.isnan(self.P_a[self.states.index(os), action, :]))[0]
         
         ns_idx = np.random.choice(p, p=self.P_a[os_idx, action, p])
     
@@ -59,7 +77,7 @@ class NRoomDomainStochastic():
     def applicable_actions(self, state):
         idx = self.states.index(state)
         A = self.P_a[idx, :, :]
-        p_actions = np.where(np.any(A!=0, axis=1))[0].tolist()
+        p_actions = np.where(np.any(~np.isnan(A), axis=1))[0].tolist()
         return p_actions
 
 

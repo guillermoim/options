@@ -1,7 +1,7 @@
 from rooms_domain import room_domain_MDP
 import numpy as np
 
-class NRoomDomain():
+class NRoomDomain:
 
     def __init__(self, dims, room_size, goal_pos, goal_rooms, high_level=True, goal_reward=0, non_goal_reward=-1, penalty=-1e12):
         states, terminal_states, goal_states, P = room_domain_MDP(dims, room_size, goal_pos, goal_rooms, high_level)
@@ -10,6 +10,7 @@ class NRoomDomain():
         self.interior_states = [s for s in states if s not in terminal_states]
         self.goal_states = goal_states
         r = {}
+        
         for s in states:
             if s in terminal_states and s not in goal_states:
                 r[s] = penalty

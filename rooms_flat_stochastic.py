@@ -8,7 +8,7 @@ room_size = 5
 goal_pos = (2,3)
 goal_rooms = [(0,0)]
 
-env = NRoomDomainStochastic(dims, room_size, goal_pos, goal_rooms, path='solutions_lmdps/policy_3x3_goal@0-0_rooms5x5.txt')
+env = NRoomDomainStochastic(dims, room_size, goal_pos, goal_rooms, path='PROV_SOLUTIONS/optimal_policy_3x3.npy')
 
 # Q-Learning
 actions = [0,1,2,3,4,5]
@@ -22,12 +22,12 @@ for i, x in enumerate(env.interior_states):
 
 gamma = 1
 
-#Q_ref = np.loadtxt('results/rooms_Flat_Q_3x3.txt')
-#errors = []
+V_ref = np.loadtxt('PROV_SOLUTIONS/optimal_VF_3x3.txt')
 
-c = 30000
-eps = 0.5
+c = 3000
+eps = 0.2
 
+errors = []
 
 for k in tqdm(range(50000)):
     
@@ -45,7 +45,6 @@ for k in tqdm(range(50000)):
         
         os, ns, r = env.apply_action(action)
 
-
         i_s = env.states.index(os)
         i_ns = env.states.index(ns)
     
@@ -55,7 +54,8 @@ for k in tqdm(range(50000)):
         else:
             Q[i_s, action] = Q[i_s, action] + alpha * (r + gamma * np.nanmax(Q[i_ns, :]) - Q[i_s, action])
     
-        #error = np.mean(np.abs(np.nanmax(Q_ref[:-len(env.terminal_states), :], axis=1) - np.nanmax(Q[:-len(env.terminal_states), :], axis=1)))
-        #errors.append(error)
+        error = np.mean(V_ref - np.nanmax(Q[:-len(env.terminal_states), :], axis=1))
+        errors.append(error)
     
-np.savetxt('Q_stochastic_3x3.txt', Q)
+np.savetxt('PROV_SOLUTIONS/Q_flat_stochastic_3x3.txt', Q)
+np.savetxt('PROV_SOLUTIONS/erro_flat_stochastic_3x3.txt.txt', errors)

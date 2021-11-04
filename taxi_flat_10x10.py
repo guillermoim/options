@@ -20,9 +20,9 @@ errors = []
 gamma = 1
 
 c = 10000
-eps = 0.3
+eps = 0.2
 
-for k in tqdm(range(30000)):
+for k in tqdm(range(60000)):
     
     env.reset()
     alpha = c / (c + k + 1)
@@ -48,9 +48,6 @@ for k in tqdm(range(30000)):
         
         error = np.mean(np.abs(np.nanmax(Q_ref[:-len(env.terminal_states), :], axis=1) - np.nanmax(Q[:-len(env.terminal_states), :], axis=1)))
         errors.append(error)
-
-    eps = eps * .99
-
     
 np.savetxt('results/TAXI_Flat_Q_10x10.txt', Q)
 np.savetxt('results/TAXI_Flat_errors_10x10.txt', errors)
