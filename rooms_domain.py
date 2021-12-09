@@ -62,7 +62,10 @@ def room_domain_MDP(dims, room_size, goal_pos, goal_rooms, high_level=True):
 
     terminal_states = [t for t in states if t[0] == 1 or P[states.index(t), states.index(t)] == 1]
 
-    return states, terminal_states, goal_states, P.toarray()
+    P = P.toarray()
+    P[P == 0] = np.nan
+
+    return states, terminal_states, goal_states, P
 
 
 class NRoomDomain():
