@@ -10,7 +10,7 @@ def Q_options(config_filepath, eps0, eps1, c1, c2):
 
     # For each key in CONFIG, create a variable with same name (ignore warnings)
     for key in CONFIG:
-        exec(f"{key} = CONFIG['{key}']")
+        exec(f"global {key}; {key} = CONFIG[\'{key}\']")
 
     # Initialize Value Functions
     Q = np.full((len(S), No), np.NaN, dtype=np.float64)
@@ -76,6 +76,8 @@ def Q_options(config_filepath, eps0, eps1, c1, c2):
                 # In this case, the only inconsistency between the HL and LL happens when the option selects an action
                 # leading to a terminal state which does not exist in the HL. We opted for a design in which there is only
                 # goal, terminal states. Any other terminal state is discarded from the MDP.
+
+                # Thus, the option must terminate when a 'wrong' action is chosen and a new option must be started.
                 if action not in HL_actions:
                     
                     proj_next_state = compute_next_state(proj_state, action)
@@ -85,8 +87,8 @@ def Q_options(config_filepath, eps0, eps1, c1, c2):
                     Qg[:, idx_proj_state, action] = Qg[:, idx_proj_state, action] + alpha_2 * (-1 + G - Qg[:, idx_proj_state, action])
                     # Terminate option
                     leaving_state = state
-                    action = np.random.choice(HL_actions)
                     eps1*=0.99
+                    break
 
                 # Apply action and project new state
                 next_state = compute_next_state(state, action)
